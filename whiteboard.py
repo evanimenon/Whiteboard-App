@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import colorchooser, filedialog, messagebox
+from tkinter import filedialog, messagebox
 from PIL import Image, ImageDraw
 
 class PaintApp:
