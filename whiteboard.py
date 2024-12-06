@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, colorchooser
 from PIL import Image, ImageDraw
 
 class PaintApp:
@@ -21,6 +21,7 @@ class PaintApp:
 
         self.history = []
         self.redo_history = []
+        self.current_stroke = []
 
         self.canvas.bind("<ButtonPress-1>", self.start_drawing)
         self.canvas.bind("<B1-Motion>", self.draw_line)
@@ -48,16 +49,7 @@ class PaintApp:
 
         brush_color_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="Brush Color", menu=brush_color_menu)
-        brush_color_menu.add_command(label="Black", command=lambda: self.set_brush_color("black"))
-        brush_color_menu.add_command(label="White", command=lambda: self.set_brush_color("white"))
-        brush_color_menu.add_command(label="Green", command=lambda: self.set_brush_color("green"))
-        brush_color_menu.add_command(label="Yellow", command=lambda: self.set_brush_color("#FFDB58"))
-        brush_color_menu.add_command(label="Red", command=lambda: self.set_brush_color("red"))
-        brush_color_menu.add_command(label="Blue", command=lambda: self.set_brush_color("blue"))
-        brush_color_menu.add_command(label="Purple", command=lambda: self.set_brush_color("#800080"))
-        brush_color_menu.add_command(label="Orange", command=lambda: self.set_brush_color("orange"))
-        brush_color_menu.add_command(label="Pink", command=lambda: self.set_brush_color("pink"))
-        brush_color_menu.add_command(label="Brown", command=lambda: self.set_brush_color("brown"))
+        brush_color_menu.add_command(label="Choose Color", command=self.choose_color)
 
         self.root.bind("<Control-s>", lambda event: self.save_image())
         self.root.bind("<Control-c>", lambda event: self.clear_canvas())
@@ -67,6 +59,7 @@ class PaintApp:
     def start_drawing(self, event):
         self.drawing = True
         self.last_x, self.last_y = event.x, event.y
+        self.current_stroke = [(self.last_x, self.last_y, self.brush_color, self.brush_size)]
 
     def draw_line(self, event):
         if self.drawing:
@@ -74,12 +67,13 @@ class PaintApp:
             self.canvas.create_line(self.last_x, self.last_y, x, y, fill=self.brush_color, width=self.brush_size, capstyle=tk.ROUND, smooth=tk.TRUE, splinesteps=36)
             self.draw.line([self.last_x, self.last_y, x, y], fill=self.brush_color, width=self.brush_size)
             self.last_x, self.last_y = x, y
-            self.history.append(self.image.copy())
-            self.redo_history = []
+            self.current_stroke.append((x, y, self.brush_color, self.brush_size))
 
     def stop_drawing(self, event):
         self.drawing = False
-        self.last_x, self.last_y = None, None
+        self.history.append(self.current_stroke)
+        self.current_stroke = []
+        self.redo_history = []
 
     def save_image(self):
         file_path = filedialog.asksaveasfilename(defaultextension=".png", filetypes=[("PNG files", "*.png"), ("JPEG files", "*.jpg"), ("All files", "*.*")])
@@ -96,24 +90,33 @@ class PaintApp:
     def set_brush_size(self, size):
         self.brush_size = size
 
-    def set_brush_color(self, color):
-        self.brush_color = color
+    def choose_color(self):
+        color = colorchooser.askcolor(title="Choose color")[1]
+        if color:
+            self.brush_color = color
 
     def undo(self):
         if self.history:
-            self.redo_history.append(self.image.copy())
-            self.image = self.history.pop()
-            self.draw = ImageDraw.Draw(self.image)
-            self.canvas.delete("all")
-            self.canvas.create_image(0, 0, anchor=tk.NW, image=self.image)
+            last_stroke = self.history.pop()
+            self.redo_history.append(last_stroke)
+            self.redraw_canvas()
 
     def redo(self):
         if self.redo_history:
-            self.history.append(self.image.copy())
-            self.image = self.redo_history.pop()
-            self.draw = ImageDraw.Draw(self.image)
-            self.canvas.delete("all")
-            self.canvas.create_image(0, 0, anchor=tk.NW, image=self.image)
+            next_stroke = self.redo_history.pop()
+            self.history.append(next_stroke)
+            self.redraw_canvas()
+
+    def redraw_canvas(self):
+        self.canvas.delete("all")
+        self.image = Image.new("RGB", (800, 600), "white")
+        self.draw = ImageDraw.Draw(self.image)
+        for stroke in self.history:
+            for i in range(1, len(stroke)):
+                x1, y1, color, size = stroke[i-1]
+                x2, y2, _, _ = stroke[i]
+                self.canvas.create_line(x1, y1, x2, y2, fill=color, width=size, capstyle=tk.ROUND, smooth=tk.TRUE, splinesteps=36)
+                self.draw.line([x1, y1, x2, y2], fill=color, width=size)
 
 if __name__ == "__main__":
     root = tk.Tk()
