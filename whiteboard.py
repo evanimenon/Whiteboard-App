@@ -6,10 +6,10 @@ class PaintApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Paint with Tkinter")
-        self.root.geometry("800x600")
+        self.root.geometry("1000x600")
 
-        self.canvas = tk.Canvas(root, bg="white")
-        self.canvas.pack(fill="both", expand=True)
+        self.canvas = tk.Canvas(root, bg="white", width=800, height=600)
+        self.canvas.pack(side=tk.LEFT, fill="both", expand=True)
 
         self.image = Image.new("RGB", (800, 600), "white")
         self.draw = ImageDraw.Draw(self.image)
@@ -18,6 +18,8 @@ class PaintApp:
         self.last_x, self.last_y = None, None
         self.brush_size = 2
         self.brush_color = "black"
+        self.last_brush_color = "black"  # Store the last used brush color
+        self.mode = "brush"  # New attribute to keep track of the mode
 
         self.history = []
         self.redo_history = []
@@ -27,7 +29,41 @@ class PaintApp:
         self.canvas.bind("<B1-Motion>", self.draw_line)
         self.canvas.bind("<ButtonRelease-1>", self.stop_drawing)
 
+        self.create_side_menu()
         self.create_menu()
+
+    def create_side_menu(self):
+        side_menu = tk.Frame(self.root, width=200, bg="#1E1E1E")
+        side_menu.pack(side=tk.RIGHT, fill="y")
+
+        # Color picker button
+        color_picker_button = tk.Button(side_menu, text="Choose Color", command=self.choose_color)
+        color_picker_button.pack(pady=0)
+
+        # Brush size slider
+        brush_size_label = tk.Label(side_menu, text="Brush Size")
+        brush_size_label.pack(pady=5)
+        self.brush_size_slider = tk.Scale(side_menu, from_=1, to=100, orient=tk.HORIZONTAL, command=self.update_brush_size)
+        self.brush_size_slider.set(self.brush_size)
+        self.brush_size_slider.pack(pady=10)
+
+        # Mode buttons
+        self.mode_label = tk.Label(side_menu, text="Mode: Brush")
+        self.mode_label.pack(pady=5)
+        brush_button = tk.Button(side_menu, text="Brush", command=lambda: self.set_mode("brush"))
+        brush_button.pack(pady=5)
+        erase_button = tk.Button(side_menu, text="Erase", command=lambda: self.set_mode("erase"))
+        erase_button.pack(pady=5)
+
+        # File menu buttons
+        save_button = tk.Button(side_menu, text="Save", command=self.save_image)
+        save_button.pack(pady=5)
+        clear_button = tk.Button(side_menu, text="Clear", command=self.clear_canvas)
+        clear_button.pack(pady=5)
+        undo_button = tk.Button(side_menu, text="Undo", command=self.undo)
+        undo_button.pack(pady=5)
+        redo_button = tk.Button(side_menu, text="Redo", command=self.redo)
+        redo_button.pack(pady=5)
 
     def create_menu(self):
         menubar = tk.Menu(self.root)
@@ -40,21 +76,22 @@ class PaintApp:
         file_menu.add_command(label="Undo", command=self.undo, accelerator="Ctrl+Z")
         file_menu.add_command(label="Redo", command=self.redo, accelerator="Ctrl+Y")
 
-        brush_size_menu = tk.Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="Brush Size", menu=brush_size_menu)
-        brush_size_menu.add_command(label="4px", command=lambda: self.set_brush_size(4))
-        brush_size_menu.add_command(label="7px", command=lambda: self.set_brush_size(7))
-        brush_size_menu.add_command(label="9px", command=lambda: self.set_brush_size(9))
-        brush_size_menu.add_command(label="12px", command=lambda: self.set_brush_size(12))
-
-        brush_color_menu = tk.Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="Brush Color", menu=brush_color_menu)
-        brush_color_menu.add_command(label="Choose Color", command=self.choose_color)
-
         self.root.bind("<Control-s>", lambda event: self.save_image())
         self.root.bind("<Control-c>", lambda event: self.clear_canvas())
         self.root.bind("<Control-z>", lambda event: self.undo())
         self.root.bind("<Control-y>", lambda event: self.redo())
+        self.root.bind("<b>", lambda event: self.set_mode("brush"))
+        self.root.bind("<e>", lambda event: self.set_mode("erase"))
+
+    def set_mode(self, mode):
+        self.mode = mode
+        if mode == "erase":
+            self.last_brush_color = self.brush_color  # Store the last used brush color
+            self.brush_color = "white"
+            self.mode_label.config(text="Mode: Erase")
+        else:
+            self.brush_color = self.last_brush_color  # Restore the last used brush color
+            self.mode_label.config(text="Mode: Brush")
 
     def start_drawing(self, event):
         self.drawing = True
@@ -87,13 +124,16 @@ class PaintApp:
         self.history = []
         self.redo_history = []
 
-    def set_brush_size(self, size):
-        self.brush_size = size
+    def update_brush_size(self, value):
+        self.brush_size = int(value)
 
     def choose_color(self):
         color = colorchooser.askcolor(title="Choose color")[1]
         if color:
             self.brush_color = color
+            self.last_brush_color = color  # Update the last used brush color
+            if self.mode == "erase":
+                self.set_mode("brush")
 
     def undo(self):
         if self.history:
