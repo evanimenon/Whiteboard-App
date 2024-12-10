@@ -1,12 +1,13 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox, colorchooser
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageTk
 
 class PaintApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Paint with Tkinter")
         self.root.geometry("1000x600")
+        self.root.resizable(width = True,height = True)
 
         self.canvas = tk.Canvas(root, bg="white", width=800, height=600)
         self.canvas.pack(side=tk.LEFT, fill="both", expand=True)
@@ -60,6 +61,9 @@ class PaintApp:
         undo_button.pack(pady=5)
         redo_button = tk.Button(side_menu, text="Redo", command=self.redo)
         redo_button.pack(pady=5)
+
+        Import_img = tk.Button(side_menu, text = 'Import IMG', command = self.Popup)
+        Import_img.pack(pady = 5)
 
     def create_menu(self):
         menubar = tk.Menu(self.root)
@@ -153,6 +157,16 @@ class PaintApp:
                 x2, y2, _, _ = stroke[i]
                 self.canvas.create_line(x1, y1, x2, y2, fill=color, width=size, capstyle=tk.ROUND, smooth=tk.TRUE, splinesteps=36)
                 self.draw.line([x1, y1, x2, y2], fill=color, width=size)
+
+    def Popup(self):
+        file_path = filedialog.askopenfilename(defaultextension=".png", filetypes=[("PNG files", "*.png"), ("JPEG files", "*.jpg"), ("All files", "*.*")])
+        if file_path:
+            img = Image.open(file_path)
+            img = img.resize((200, 200), Image.ANTIALIAS)
+            tk_img = ImageTk.PhotoImage(img)
+            self.canvas.create_image(0, 0, anchor=tk.NW, image=tk_img)
+            self.canvas.image = tk_img
+            
 
 if __name__ == "__main__":
     root = tk.Tk()
