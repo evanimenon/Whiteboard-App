@@ -1,12 +1,13 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox, colorchooser
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageTk
 
 class PaintApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Paint with Tkinter")
         self.root.geometry("1000x600")
+        self.root.resizable(width = True,height = True)
 
         self.canvas = tk.Canvas(root, bg="white", width=800, height=600)
         self.canvas.pack(side=tk.LEFT, fill="both", expand=True)
@@ -41,7 +42,7 @@ class PaintApp:
 
         brush_size_label = tk.Label(side_menu, text="Brush Size")
         brush_size_label.pack(pady=5)
-        self.brush_size_slider = tk.Scale(side_menu, from_=1, to=100, orient=tk.HORIZONTAL, command=self.update_brush_size)
+        self.brush_size_slider = tk.Scale(side_menu, from_=1, to=100, orient=tk.HORIZONTAL, command = self.update_brush_size)
         self.brush_size_slider.set(self.brush_size)
         self.brush_size_slider.pack(pady=10)
 
@@ -52,14 +53,23 @@ class PaintApp:
         erase_button = tk.Button(side_menu, text="Erase", command=lambda: self.set_mode("erase"))
         erase_button.pack(pady=5)
 
-        save_button = tk.Button(side_menu, text="Save", command=self.save_image)
+        save_button = tk.Button(side_menu, text="Save", command = self.save_image)
         save_button.pack(pady=5)
-        clear_button = tk.Button(side_menu, text="Clear", command=self.clear_canvas)
+        clear_button = tk.Button(side_menu, text="Clear", command = self.clear_canvas)
         clear_button.pack(pady=5)
-        undo_button = tk.Button(side_menu, text="Undo", command=self.undo)
+        undo_button = tk.Button(side_menu, text="Undo", command = self.undo)
         undo_button.pack(pady=5)
-        redo_button = tk.Button(side_menu, text="Redo", command=self.redo)
+        redo_button = tk.Button(side_menu, text="Redo", command = self.redo)
         redo_button.pack(pady=5)
+
+        Size = tk.Entry(side_menu, width = 10)
+        Size.insert(tk.END,'Insert Size')
+        Size.pack(pady = 5)
+
+        Size.bind("<FocusIn>", lambda event: Size.delete(0,tk.END))
+
+        Import_img = tk.Button(side_menu, text = 'Import IMG', command = lambda: self.Popup(Size.get()))
+        Import_img.pack(pady = 5)
 
     def create_menu(self):
         menubar = tk.Menu(self.root)
@@ -153,6 +163,19 @@ class PaintApp:
                 x2, y2, _, _ = stroke[i]
                 self.canvas.create_line(x1, y1, x2, y2, fill=color, width=size, capstyle=tk.ROUND, smooth=tk.TRUE, splinesteps=36)
                 self.draw.line([x1, y1, x2, y2], fill=color, width=size)
+
+    def Popup(self,size):
+        file_path = filedialog.askopenfilename(defaultextension=".png", filetypes=[("PNG files", "*.png"), ("JPEG files", "*.jpg"), ("All files", "*.*")])
+        size = size.split('x')
+        x_size = int(size[0])
+        y_size = int(size[1])
+        if file_path:
+            img = Image.open(file_path)
+            img = img.resize((x_size, y_size), Image.ANTIALIAS)
+            tk_img = ImageTk.PhotoImage(img)
+            self.canvas.create_image(0, 0, anchor=tk.NW, image=tk_img)
+            self.canvas.image = tk_img
+            
 
 if __name__ == "__main__":
     root = tk.Tk()
